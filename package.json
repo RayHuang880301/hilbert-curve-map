@@ -7,7 +7,11 @@
     "clean": "hardhat clean && rm -rf cache",
     "build": "hardhat compile && hardhat typechain",
     "typechain": "hardhat typechain",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "test:mintLand": "hardhat test test/mintLand.test.ts",
+    "test:ownerOf": "hardhat test test/ownerOf.test.ts",
+    "test:transfer": "hardhat test test/transfer.test.ts",
+    "test:approve": "hardhat test test/approve.test.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
