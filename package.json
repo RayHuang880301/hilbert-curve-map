@@ -1,0 +1,21 @@
+{
+  "name": "hilbert-curve-map",
+  "version": "0.0.1",
+  "description": "Hilbert Curve Map",
+  "scripts": {
+    "start": "hardhat node",
+    "clean": "hardhat clean && rm -rf cache",
+    "build": "hardhat compile && hardhat typechain",
+    "typechain": "hardhat typechain",
+    "test": "hardhat test"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@openzeppelin/contracts": "^4.9.0",
+    "hardhat": "^2.15.0",
+    "ethers": "^5.7.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  }
+}
