@@ -146,6 +146,67 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
        return  _ownerOf(hIndex);
     }
 
+    function balanceOf(address owner) public view virtual override(IERC721, IHilbertCurveMap) returns (uint256) {
+        require(owner != address(0), "ERC721: address zero is not a valid owner");
+        return _balances[owner];
+    }
+
+    function name() external view virtual returns (string memory) {
+        return _name;
+    }
+
+    function symbol() external view virtual returns (string memory) {
+        return _symbol;
+    }
+
+    function approve(address to, uint256 tokenId) public virtual {
+        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
+        address owner = ownerOf(tokenId);
+        require(to != owner, "ERC721: approval to current owner");
+
+        require(
+            _msgSender() == owner || isApprovedForAll(owner, _msgSender()),
+            "ERC721: approve caller is not token owner or approved for all"
+        );
+
+        _approve(to, tokenId);
+    }
+
+    function getApproved(uint256 tokenId) public view virtual returns (address) {
+        _requireMinted(tokenId);
+
+        return _tokenApprovals[tokenId];
+    }
+
+    function setApprovalForAll(address operator, bool approved) public virtual {
+        _setApprovalForAll(_msgSender(), operator, approved);
+    }
+
+    function isApprovedForAll(address owner, address operator) public view virtual returns (bool) {
+        return _operatorApprovals[owner][operator];
+    }
+
+    function transferFrom(address from, address to, uint256 tokenId) public virtual {
+        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
+        //solhint-disable-next-line max-line-length
+        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
+
+        _transfer(from, to, tokenId);
+    }
+
+    function safeTransferFrom(address from, address to, uint256 tokenId) public virtual {
+        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
+        safeTransferFrom(from, to, tokenId, "");
+    }
+
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public virtual {
+        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
+        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
+        _safeTransfer(from, to, tokenId, data);
+    }
+
+    /* ========== Internal functions ========== */
+
     function _ownerOf(uint256 hIndex) internal view virtual returns (address) {
         // if occupy length is 1, the 1x1 land is owned by the owner of hIndex
         if(_occupyInfos[hIndex].length == 1) return _owners[hIndex];
@@ -226,72 +287,6 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
         emit Transfer(from, to, tokenId);
     }
 
-    function balanceOf(address owner) public view virtual override(IERC721, IHilbertCurveMap) returns (uint256) {
-        require(owner != address(0), "ERC721: address zero is not a valid owner");
-        return _balances[owner];
-    }
-
-    function _isZeroOccupiedLength(uint256 hIndex) internal view returns (bool) {
-        return _occupyInfos[hIndex].length == 0;
-    }
-
-
-    /* ========== REFERENCES FROM OPENZEPPELIN ERC721 ========== */
-
-    function name() external view virtual returns (string memory) {
-        return _name;
-    }
-
-    function symbol() external view virtual returns (string memory) {
-        return _symbol;
-    }
-
-    function approve(address to, uint256 tokenId) public virtual {
-        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
-        address owner = ownerOf(tokenId);
-        require(to != owner, "ERC721: approval to current owner");
-
-        require(
-            _msgSender() == owner || isApprovedForAll(owner, _msgSender()),
-            "ERC721: approve caller is not token owner or approved for all"
-        );
-
-        _approve(to, tokenId);
-    }
-
-    function getApproved(uint256 tokenId) public view virtual returns (address) {
-        _requireMinted(tokenId);
-
-        return _tokenApprovals[tokenId];
-    }
-
-    function setApprovalForAll(address operator, bool approved) public virtual {
-        _setApprovalForAll(_msgSender(), operator, approved);
-    }
-
-    function isApprovedForAll(address owner, address operator) public view virtual returns (bool) {
-        return _operatorApprovals[owner][operator];
-    }
-
-    function transferFrom(address from, address to, uint256 tokenId) public virtual {
-        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
-        //solhint-disable-next-line max-line-length
-        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
-
-        _transfer(from, to, tokenId);
-    }
-
-    function safeTransferFrom(address from, address to, uint256 tokenId) public virtual {
-        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
-        safeTransferFrom(from, to, tokenId, "");
-    }
-
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public virtual {
-        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
-        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
-        _safeTransfer(from, to, tokenId, data);
-    }
-
     function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal virtual {
         _transfer(from, to, tokenId);
         require(_checkOnERC721Received(from, to, tokenId, data), "ERC721: transfer to non ERC721Receiver implementer");
@@ -319,6 +314,10 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
 
     function _requireMinted(uint256 tokenId) internal view virtual {
         require(_exists(tokenId), "ERC721: invalid token ID");
+    }
+
+    function _isZeroOccupiedLength(uint256 hIndex) internal view returns (bool) {
+        return _occupyInfos[hIndex].length == 0;
     }
 
 
