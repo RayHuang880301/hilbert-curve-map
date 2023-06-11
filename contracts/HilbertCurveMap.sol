@@ -8,18 +8,18 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import {HilbertCurve} from  "./HilbertCurve.sol";
+import {HilbertCurve} from "./lib/HilbertCurve.sol";
 import {IHilbertCurveMap} from "./IHilbertCurveMap.sol";
 
 import "hardhat/console.sol";
 
 enum LandSize {
-    XSMALL,  // 0: 1 * 1
-    SMALL,   // 1: 2 * 2
-    MEDIUM,  // 2: 4 * 4
-    LARGE,   // 3: 8 * 8
-    XLARGE,  // 4: 16 * 16
-    XXLARGE  // 5: 32 * 32
+    XSMALL, // 0: 1 * 1
+    SMALL, // 1: 2 * 2
+    MEDIUM, // 2: 4 * 4
+    LARGE, // 3: 8 * 8
+    XLARGE, // 4: 16 * 16
+    XXLARGE // 5: 32 * 32
 }
 
 contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, IHilbertCurveMap {
@@ -39,8 +39,8 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
     uint256 constant MAX_H_INDEX = 1 << (LENGTH_ORDER * 2); // 2^LENGTH_ORDER * 2^LENGTH_ORDER - 1
     uint8 constant MAX_LAND_SIZE = uint8(type(LandSize).max);
     // hIndex => occupyInfo
-    mapping (uint256 => OccupyInfo) internal _occupyInfos;
-    mapping (uint256 => string) internal _tokenURIs;
+    mapping(uint256 => OccupyInfo) internal _occupyInfos;
+    mapping(uint256 => string) internal _tokenURIs;
 
     struct OccupyInfo {
         uint128 length; // LENGTH_ORDER must be less than 64
@@ -60,14 +60,14 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
     }
 
     function mintLand(uint256 hIndex, LandSize landSize, string memory _tokenURI) external payable {
-        if(hIndex >= MAX_H_INDEX) revert HIndexOutOfRange(hIndex);
+        if (hIndex >= MAX_H_INDEX) revert HIndexOutOfRange(hIndex);
 
         uint256 size = uint256(landSize);
         uint256 nodeClass = HilbertCurve.getNodeClass(hIndex, LENGTH_ORDER);
-        if(nodeClass < size) revert NodeClassLtSize(nodeClass, size);
+        if (nodeClass < size) revert NodeClassLtSize(nodeClass, size);
 
         uint256[] memory leadNodes = HilbertCurve.getLeadNodes(hIndex, LENGTH_ORDER);
-        if(!_isFreeLand(hIndex, leadNodes, size)) revert LandIsNotFree(hIndex, size);
+        if (!_isFreeLand(hIndex, leadNodes, size)) revert LandIsNotFree(hIndex, size);
         _occupy(hIndex, leadNodes, size);
 
         address sender = _msgSender();
@@ -79,11 +79,10 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
         emit LandMinted(sender, tokenId, hIndex, landSize);
     }
 
-    function _isFreeLand(uint256 hIndex, uint256[] memory leadNodes, uint256 size) internal view returns(bool) {
+    function _isFreeLand(uint256 hIndex, uint256[] memory leadNodes, uint256 size) internal view returns (bool) {
         // Someone has bought this land
         uint256 mask = 1 << size;
-        if(_occupyInfos[hIndex].occupiedClass | mask == _occupyInfos[hIndex].occupiedClass)
-            return false;
+        if (_occupyInfos[hIndex].occupiedClass | mask == _occupyInfos[hIndex].occupiedClass) return false;
 
         uint256 leadNode;
         OccupyInfo storage occupyInfo;
@@ -91,8 +90,7 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
             leadNode = leadNodes[classIndex];
             occupyInfo = _occupyInfos[leadNode];
             // Someone has bought a larger land which containing your chosen land
-            if(occupyInfo.length > 0 && occupyInfo.length > hIndex - leadNode) 
-                return false;
+            if (occupyInfo.length > 0 && occupyInfo.length > hIndex - leadNode) return false;
         }
         return true;
     }
@@ -105,9 +103,9 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
         // occupy self
         uint128 mask = 1;
         _occupyInfos[hIndex].occupiedClass = _occupyInfos[hIndex].occupiedClass | mask;
-        
+
         uint256 leadNode;
-        for (uint256 classIndex; classIndex < MAX_LAND_SIZE ; classIndex++) {
+        for (uint256 classIndex; classIndex < MAX_LAND_SIZE; classIndex++) {
             leadNode = leadNodes[classIndex];
             mask = uint128(1 << (classIndex + 1));
             OccupyInfo storage occupyInfo = _occupyInfos[leadNode];
@@ -143,7 +141,7 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
     }
 
     function ownerOf(uint256 hIndex) public view virtual override(IERC721, IHilbertCurveMap) returns (address) {
-       return  _ownerOf(hIndex);
+        return _ownerOf(hIndex);
     }
 
     function balanceOf(address owner) public view virtual override(IERC721, IHilbertCurveMap) returns (uint256) {
@@ -160,7 +158,7 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
     }
 
     function approve(address to, uint256 tokenId) public virtual {
-        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
+        if (_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
         address owner = ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
 
@@ -187,7 +185,7 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public virtual {
-        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
+        if (_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
         //solhint-disable-next-line max-line-length
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
 
@@ -195,12 +193,12 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId) public virtual {
-        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
+        if (_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
         safeTransferFrom(from, to, tokenId, "");
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public virtual {
-        if(_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
+        if (_isZeroOccupiedLength(tokenId)) revert OccupiedLengthIsZero(tokenId);
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner or approved");
         _safeTransfer(from, to, tokenId, data);
     }
@@ -209,16 +207,16 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
 
     function _ownerOf(uint256 hIndex) internal view virtual returns (address) {
         // if occupy length is 1, the 1x1 land is owned by the owner of hIndex
-        if(_occupyInfos[hIndex].length == 1) return _owners[hIndex];
+        if (_occupyInfos[hIndex].length == 1) return _owners[hIndex];
 
         uint256[] memory leadNodes = HilbertCurve.getLeadNodes(hIndex, LENGTH_ORDER);
         uint256 leadNode;
         OccupyInfo storage occupyInfo;
-        for(uint256 i; i < MAX_LAND_SIZE; i++) {
+        for (uint256 i; i < MAX_LAND_SIZE; i++) {
             leadNode = leadNodes[i];
             occupyInfo = _occupyInfos[leadNode];
             // if occupy length includes hIndex, the land is owned by the owner of leadNode
-            if(occupyInfo.length > hIndex - leadNode) return _owners[leadNode];
+            if (occupyInfo.length > hIndex - leadNode) return _owners[leadNode];
         }
         return address(0);
     }
@@ -242,7 +240,7 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
             // The ERC fails to describe this case.
             _balances[to] += num;
         }
-        
+
         _owners[tokenId] = to;
 
         emit Transfer(address(0), to, tokenId);
@@ -319,7 +317,6 @@ contract HilbertCurveMap is Context, ERC165, IERC721, IERC721Metadata, Ownable, 
     function _isZeroOccupiedLength(uint256 hIndex) internal view returns (bool) {
         return _occupyInfos[hIndex].length == 0;
     }
-
 
     function _checkOnERC721Received(
         address from,
